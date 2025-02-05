@@ -17,7 +17,7 @@ Muttnes's Flashlight is a Minecraft mod that adds a functional flashlight to the
 - Adds a new flashlight item to the game along with batteries.
 
 ## Configuration
-A TOML file will be generated inside the mod's config folder. In this file, you can enable or disable the flashlight and battery items appearing as loot in structures from other mods. Note: This feature may cause compatibility issues with certain mods or crash the game in some cases.
+A TOML file will be generated inside the mod's config folder. In this file, you can enable or disable the flashlight and battery items appearing as loot in structures from other mods. Note: This feature may or may not cause compatibility issues with certain mods. Use at own risk
 
 ## Support
 Feel free to open an issue and I'll take a look at it when i can. This is my first ever mod so any feedback is welcome!
