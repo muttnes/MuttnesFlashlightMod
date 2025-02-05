@@ -1,0 +1,28 @@
+{
+    "parent": "minecraft:item/handheld",
+    "loader": "forge:separate_transforms",
+    "base": {
+      "parent": "muttnesflashlight:item/flashlighton"
+    },
+    "perspectives": {
+      "gui": {
+        "parent": "item/generated",
+        "textures": {
+          "layer0": "muttnesflashlight:item/flashlighton2d"
+        }
+      },
+      "ground": {
+        "parent": "item/generated",
+        "textures": {
+          "layer0": "muttnesflashlight:item/flashlighton2d"
+        }
+      },
+      "fixed": {
+        "parent": "item/generated",
+        "textures": {
+          "layer0": "muttnesflashlight:item/flashlighton2d"
+        }
+      }
+    }
+  }
+  

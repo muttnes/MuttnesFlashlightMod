@@ -1,0 +1,5 @@
+{   
+    "item.muttnesflashlight.flashlight": "Linterna",
+    "item.muttnesflashlight.battery": "Pila",
+    "hud.muttnes_flashlight.battery": "Nivel de batería: %s%%"
+}
