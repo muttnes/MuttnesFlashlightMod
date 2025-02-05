@@ -1,4 +1,4 @@
-package net.muttnes.MuttnesFlashlight.items.custom;
+package net.muttnes.MuttnesFlashlight.client;
 
 import atomicstryker.dynamiclights.server.IDynamicLightSource;
 import net.minecraft.server.level.ServerLevel;
