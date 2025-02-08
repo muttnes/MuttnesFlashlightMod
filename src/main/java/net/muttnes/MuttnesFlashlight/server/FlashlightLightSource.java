@@ -1,27 +1,30 @@
-package net.muttnes.MuttnesFlashlight.client;
+package net.muttnes.MuttnesFlashlight.server;
 
 import atomicstryker.dynamiclights.server.IDynamicLightSource;
+import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.decoration.ArmorStand;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import net.muttnes.MuttnesFlashlight.entities.ModEntities;
+import net.muttnes.MuttnesFlashlight.entities.custom.LightEntity;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.level.ClipContext;
 
 public class FlashlightLightSource implements IDynamicLightSource {
 
-    private final Player player;
-    private final ArmorStand lightEntity;
+    private final ServerPlayer player;
+    private final LightEntity lightEntity;
     private final int lightLevel;
     private static final double FLASHLIGHT_RANGE = 10.0;
 
     private Vec3 previousPosition;
     private double previousHeight;
 
-    public FlashlightLightSource(Level world, Player player, int lightLevel) {
+    public FlashlightLightSource(ServerLevel world, ServerPlayer player, int lightLevel) {
         this.player = player;
         this.lightLevel = lightLevel;
 
@@ -29,7 +32,8 @@ public class FlashlightLightSource implements IDynamicLightSource {
         this.previousPosition = initialPos;
         this.previousHeight = initialPos.y;
 
-        this.lightEntity = new ArmorStand((ServerLevel) world, initialPos.x, initialPos.y, initialPos.z);
+        this.lightEntity = new LightEntity(ModEntities.LIGHT_ENTITY.get(), world);
+        this.lightEntity.setPos(initialPos.x, initialPos.y, initialPos.z);
         this.lightEntity.setNoGravity(true);
         this.lightEntity.setInvisible(true);
         this.lightEntity.setInvulnerable(true);
@@ -37,6 +41,7 @@ public class FlashlightLightSource implements IDynamicLightSource {
         this.lightEntity.setSilent(true);
 
         world.addFreshEntity(this.lightEntity);
+        world.getServer().getPlayerList().broadcastAll(new ClientboundAddEntityPacket(this.lightEntity));
     }
 
     @Override
@@ -76,9 +81,6 @@ public class FlashlightLightSource implements IDynamicLightSource {
 
         if (hitResult.getType() == HitResult.Type.BLOCK) {
             BlockHitResult blockHitResult = (BlockHitResult) hitResult;
-            if (world.getBlockState(blockHitResult.getBlockPos()).isAir()) {
-                return eyePos.add(lookDirection.x * FLASHLIGHT_RANGE, lookDirection.y * FLASHLIGHT_RANGE, lookDirection.z * FLASHLIGHT_RANGE);
-            }
             return blockHitResult.getLocation();
         }
 

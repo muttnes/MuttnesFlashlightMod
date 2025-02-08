@@ -1,6 +1,8 @@
 package net.muttnes.MuttnesFlashlight.items.custom;
 
 import atomicstryker.dynamiclights.server.DynamicLights;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
@@ -8,7 +10,11 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.muttnes.MuttnesFlashlight.client.FlashlightLightSource;
+import net.minecraftforge.common.ForgeConfig.Server;
+import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.network.simple.SimpleChannel;
+import net.muttnes.MuttnesFlashlight.network.FlashlightTogglePacket;
+import net.muttnes.MuttnesFlashlight.server.FlashlightLightSource;
 
 import java.util.HashMap;
 import java.util.UUID;
@@ -17,8 +23,11 @@ public class FlashlightItem extends Item {
 
     private static final HashMap<UUID, FlashlightLightSource> activeLights = new HashMap<>();
 
-    public FlashlightItem(Properties properties) {
+    private final SimpleChannel networkChannel;
+
+    public FlashlightItem(Properties properties, SimpleChannel networkChannel) {
         super(properties);
+        this.networkChannel = networkChannel;
         properties.stacksTo(1);
     }
 
@@ -28,28 +37,46 @@ public class FlashlightItem extends Item {
 
         boolean isOn = flashlightStack.getOrCreateTag().getBoolean("on");
         flashlightStack.getOrCreateTag().putBoolean("on", !isOn);
-    
+
         ensureFlashlightHasId(flashlightStack);
         UUID flashlightId = flashlightStack.getOrCreateTag().getUUID("flashlightId");
-    
+
         if (!world.isClientSide) {
             if (flashlightStack.getOrCreateTag().getBoolean("on")) {
                 if (!activeLights.containsKey(flashlightId)) {
-                    FlashlightLightSource lightSource = new FlashlightLightSource(world, player, 13);
+                    FlashlightLightSource lightSource = new FlashlightLightSource((ServerLevel) world, (ServerPlayer) player, 13);
                     DynamicLights.addLightSource(lightSource);
                     activeLights.put(flashlightId, lightSource);
                 }
             } else {
                 removeLightSource(flashlightStack);
             }
+
+            networkChannel.send(PacketDistributor.PLAYER.with(() -> (ServerPlayer) player), new FlashlightTogglePacket(flashlightStack.getOrCreateTag().getBoolean("on")));
         }
-    
+
         return InteractionResultHolder.sidedSuccess(flashlightStack, world.isClientSide);
-    }     
+    }
+
+    private void removeLightSource(ItemStack stack) {
+        if (stack.getOrCreateTag().contains("flashlightId")) {
+            UUID flashlightId = stack.getOrCreateTag().getUUID("flashlightId");
+            if (activeLights.containsKey(flashlightId)) {
+                activeLights.get(flashlightId).remove();
+                activeLights.remove(flashlightId);
+            }
+        }
+    }
+
+    private void ensureFlashlightHasId(ItemStack stack) {
+        if (!stack.getOrCreateTag().contains("flashlightId")) {
+            stack.getOrCreateTag().putUUID("flashlightId", UUID.randomUUID());
+        }
+    }
     
     @Override
     public void inventoryTick(ItemStack stack, Level world, Entity entity, int slot, boolean selected) {
-        if (!world.isClientSide && entity instanceof Player player) {
+        if (!world.isClientSide && entity instanceof ServerPlayer player) {
             if (!stack.getOrCreateTag().contains("batteryLevel")) {
                 stack.getOrCreateTag().putInt("batteryLevel", 100);
             }
@@ -74,7 +101,7 @@ public class FlashlightItem extends Item {
             UUID flashlightId = stack.getOrCreateTag().getUUID("flashlightId");
     
             if (!activeLights.containsKey(flashlightId)) {
-                FlashlightLightSource lightSource = new FlashlightLightSource(world, player, 13);
+                FlashlightLightSource lightSource = new FlashlightLightSource((ServerLevel) world, player, 13);
                 DynamicLights.addLightSource(lightSource);
                 activeLights.put(flashlightId, lightSource);
             }
@@ -98,23 +125,6 @@ public class FlashlightItem extends Item {
             }
         }
     }    
-    
-    private void removeLightSource(ItemStack stack) {
-        if (stack.getOrCreateTag().contains("flashlightId")) {
-            UUID flashlightId = stack.getOrCreateTag().getUUID("flashlightId");
-            if (activeLights.containsKey(flashlightId)) {
-                activeLights.get(flashlightId).remove();
-                activeLights.remove(flashlightId);
-            }
-            stack.getOrCreateTag().remove("flashlightId");
-        }
-    }
-    
-    private void ensureFlashlightHasId(ItemStack stack) {
-        if (!stack.getOrCreateTag().contains("flashlightId")) {
-            stack.getOrCreateTag().putUUID("flashlightId", UUID.randomUUID());
-        }
-    }
     
     private void turnOffFlashlight(ItemStack stack) {
         stack.getOrCreateTag().putBoolean("on", false);
