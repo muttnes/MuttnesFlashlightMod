@@ -1,8 +1,8 @@
-# Muttnes's mods license | 02/05/2025
+# Muttnes's mods license | 05/02/2025
 
 ## 1. Usage and Distribution
 - This mod is free to use but **may not be used for commercial purposes** under any circumstances.  
-- Distribution is only allowed on **CurseForge**. **Uploading this mod to any other platform** (including but not limited to Modrinth, 9Minecraft, or other third-party sites) **is strictly prohibited**.  
+- Distribution is only allowed on **CurseForge**. **Uploading this mod to any other platform** (including but not limited to Modrinth, 9Minecraft, or other third-party sites) **is strictly prohibited**. Unless it's done in a modpack or similar
 
 ## 2. Derived and Inspired Projects
 - Any derived project, modification, or implementation inspired by this mod **must give explicit credit** to me as the original creator.  
