@@ -1,159 +1,124 @@
 package net.muttnes.MuttnesFlashlight.items.custom;
 
-import atomicstryker.dynamiclights.server.DynamicLights;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.common.ForgeConfig.Server;
-import net.minecraftforge.network.PacketDistributor;
-import net.minecraftforge.network.simple.SimpleChannel;
-import net.muttnes.MuttnesFlashlight.network.FlashlightTogglePacket;
-import net.muttnes.MuttnesFlashlight.server.FlashlightLightSource;
+import net.muttnes.MuttnesFlashlight.state.FlashlightState;
+import net.muttnes.MuttnesFlashlight.service.FlashlightController;
 
-import java.util.HashMap;
 import java.util.UUID;
 
 public class FlashlightItem extends Item {
 
-    private static final HashMap<UUID, FlashlightLightSource> activeLights = new HashMap<>();
+    private static final int TICK_BATTERY_INTERVAL = 240;
 
-    private final SimpleChannel networkChannel;
-
-    public FlashlightItem(Properties properties, SimpleChannel networkChannel) {
-        super(properties);
-        this.networkChannel = networkChannel;
-        properties.stacksTo(1);
+    public FlashlightItem(Properties properties) {
+        super(properties.stacksTo(1));
     }
 
     @Override
-    public InteractionResultHolder<ItemStack> use(Level world, Player player, InteractionHand hand) {
-        ItemStack flashlightStack = player.getItemInHand(hand);
+    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
 
-        boolean isOn = flashlightStack.getOrCreateTag().getBoolean("on");
-        flashlightStack.getOrCreateTag().putBoolean("on", !isOn);
+        FlashlightState.ensureId(stack);
 
-        ensureFlashlightHasId(flashlightStack);
-        UUID flashlightId = flashlightStack.getOrCreateTag().getUUID("flashlightId");
-
-        if (!world.isClientSide) {
-            if (flashlightStack.getOrCreateTag().getBoolean("on")) {
-                if (!activeLights.containsKey(flashlightId)) {
-                    FlashlightLightSource lightSource = new FlashlightLightSource((ServerLevel) world, (ServerPlayer) player, 13);
-                    DynamicLights.addLightSource(lightSource);
-                    activeLights.put(flashlightId, lightSource);
-                }
-            } else {
-                removeLightSource(flashlightStack);
-            }
-
-            networkChannel.send(PacketDistributor.PLAYER.with(() -> (ServerPlayer) player), new FlashlightTogglePacket(flashlightStack.getOrCreateTag().getBoolean("on")));
+        if (!level.isClientSide) {
+            toggleState(stack);
         }
 
-        return InteractionResultHolder.sidedSuccess(flashlightStack, world.isClientSide);
+        return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
     }
 
-    private void removeLightSource(ItemStack stack) {
-        if (stack.getOrCreateTag().contains("flashlightId")) {
-            UUID flashlightId = stack.getOrCreateTag().getUUID("flashlightId");
-            if (activeLights.containsKey(flashlightId)) {
-                activeLights.get(flashlightId).remove();
-                activeLights.remove(flashlightId);
-            }
+    private void toggleState(ItemStack stack) {
+
+        if (!FlashlightState.isOn(stack) && FlashlightState.isEmpty(stack)) {
+            return;
+        }
+
+        FlashlightState.toggle(stack);
+
+        if (FlashlightState.isEmpty(stack)) {
+            FlashlightState.turnOff(stack);
         }
     }
 
-    private void ensureFlashlightHasId(ItemStack stack) {
-        if (!stack.getOrCreateTag().contains("flashlightId")) {
-            stack.getOrCreateTag().putUUID("flashlightId", UUID.randomUUID());
-        }
-    }
-    
     @Override
-    public void inventoryTick(ItemStack stack, Level world, Entity entity, int slot, boolean selected) {
-        if (!world.isClientSide && entity instanceof ServerPlayer player) {
-            if (!stack.getOrCreateTag().contains("batteryLevel")) {
-                stack.getOrCreateTag().putInt("batteryLevel", 100);
-            }
-    
-            if (!stack.getOrCreateTag().contains("tickCounter")) {
-                stack.getOrCreateTag().putInt("tickCounter", 0);
-            }
-    
-            boolean isHoldingFlashlight = player.getItemInHand(InteractionHand.MAIN_HAND).equals(stack) ||
-                                          player.getItemInHand(InteractionHand.OFF_HAND).equals(stack);
-            boolean isFlashlightOn = isFlashlightOn(stack);
-    
-            int currentTicks = stack.getOrCreateTag().getInt("tickCounter");
-    
-            if (!isHoldingFlashlight || !isFlashlightOn) {
-                stack.getOrCreateTag().putInt("tickCounter", currentTicks);
-                removeLightSource(stack);
-                return;
-            }
-    
-            ensureFlashlightHasId(stack);
-            UUID flashlightId = stack.getOrCreateTag().getUUID("flashlightId");
-    
-            if (!activeLights.containsKey(flashlightId)) {
-                FlashlightLightSource lightSource = new FlashlightLightSource((ServerLevel) world, player, 13);
-                DynamicLights.addLightSource(lightSource);
-                activeLights.put(flashlightId, lightSource);
-            }
-    
-            if (activeLights.containsKey(flashlightId)) {
-                activeLights.get(flashlightId).update();
-            }
-    
-            currentTicks++;
-            stack.getOrCreateTag().putInt("tickCounter", currentTicks);
+    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slot, boolean selected) {
+        if (level.isClientSide || !(entity instanceof ServerPlayer player)) return;
 
-            shouldCauseReequipAnimation(stack, stack, isFlashlightOn);
-    
-            if (currentTicks >= 240) {
-                drainBattery(stack);
-                stack.getOrCreateTag().putInt("tickCounter", 0);
-    
-                if (getBatteryLevel(stack) <= 0) {
-                    turnOffFlashlight(stack);
-                }
-            }
+        init(stack);
+
+        if (FlashlightState.isEmpty(stack)) {
+            FlashlightState.turnOff(stack);
+            FlashlightController.removeLight(getId(stack));
+            return;
         }
-    }    
-    
-    private void turnOffFlashlight(ItemStack stack) {
-        stack.getOrCreateTag().putBoolean("on", false);
-        removeLightSource(stack);
-    }
-    
 
-    public static void drainBattery(ItemStack stack) {
-        int batteryLevel = stack.getOrCreateTag().getInt("batteryLevel");
-        if (batteryLevel > 0) {
-            stack.getOrCreateTag().putInt("batteryLevel", batteryLevel - 1);
+        if (!isHolding(player, stack) || !FlashlightState.isOn(stack)) {
+            FlashlightController.removeLight(getId(stack));
+            return;
+        }
+
+        UUID id = getId(stack);
+
+        FlashlightController.ensureLight(
+            (ServerLevel) level,
+            player,
+            stack,
+            id
+        );
+        FlashlightController.updateLight(id);
+
+        handleBattery(stack);
+    }
+
+    private void init(ItemStack stack) {
+        if (!stack.getOrCreateTag().contains("tickCounter")) {
             stack.getOrCreateTag().putInt("tickCounter", 0);
         }
     }
 
-    public static void setBatteryLevel(ItemStack stack, int level) {
-        stack.getOrCreateTag().putInt("batteryLevel", Math.min(level, 100));
-    }
-    
-    public static int getBatteryLevel(ItemStack stack) {
-        return stack.getOrCreateTag().getInt("batteryLevel");
+    private boolean isHolding(ServerPlayer player, ItemStack stack) {
+        return player.getMainHandItem().equals(stack)
+                || player.getOffhandItem().equals(stack);
     }
 
-    public static boolean isFlashlightOn(ItemStack stack) {
-        return stack.getOrCreateTag().getBoolean("on");
+    private void handleBattery(ItemStack stack) {
+        CompoundTag tag = stack.getOrCreateTag();
+
+        int ticks = tag.getInt("tickCounter") + 1;
+        tag.putInt("tickCounter", ticks);
+
+        if (ticks < TICK_BATTERY_INTERVAL) {
+            return;
+        }
+
+        FlashlightState.drain(stack, 1);
+        tag.putInt("tickCounter", 0);
+
+        if (FlashlightState.isEmpty(stack)) {
+            FlashlightState.turnOff(stack);
+            FlashlightController.removeLight(getId(stack));
+        }
+    }
+
+    private UUID getId(ItemStack stack) {
+        return stack.getOrCreateTag().getUUID("flashlightId");
     }
 
     @Override
-    public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
-        return false;
+    public boolean shouldCauseReequipAnimation(
+            ItemStack oldStack,
+            ItemStack newStack,
+            boolean slotChanged
+    ) {
+        return slotChanged || oldStack.getItem() != newStack.getItem();
     }
 }

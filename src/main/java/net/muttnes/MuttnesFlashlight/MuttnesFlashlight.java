@@ -20,6 +20,7 @@ import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.muttnes.MuttnesFlashlight.client.FlashlightHUD;
 import net.muttnes.MuttnesFlashlight.client.LightEntityRenderer;
+import net.muttnes.MuttnesFlashlight.config.Config;
 import net.muttnes.MuttnesFlashlight.entities.custom.LightEntity;
 
 import net.muttnes.MuttnesFlashlight.entities.ModEntities;
@@ -82,7 +83,7 @@ public class MuttnesFlashlight
         
         {
             ItemProperties.register(ModItems.FLASHLIGHT.get(), new ResourceLocation("on"), 
-            (stack, world, entity, seed) -> FlashlightItem.isFlashlightOn(stack) ? 1.0F : 0.0F);
+            (stack, world, entity, seed) -> stack.getOrCreateTag().getBoolean("on") ? 1.0F : 0.0F);
 
             MinecraftForge.EVENT_BUS.register(FlashlightHUD.class);
             EntityRenderers.register(ModEntities.LIGHT_ENTITY.get(), LightEntityRenderer::new);

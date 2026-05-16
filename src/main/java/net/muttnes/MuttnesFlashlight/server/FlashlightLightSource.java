@@ -19,8 +19,10 @@ public class FlashlightLightSource implements IDynamicLightSource {
     private final ServerPlayer player;
     private final LightEntity lightEntity;
     private final int lightLevel;
-    private static final double FLASHLIGHT_RANGE = 10.0;
-
+    private static final double FLASHLIGHT_RANGE = 8.0;
+    
+    private Vec3 cachedPos;
+    private int lastRaycastTick = -1;
     private Vec3 previousPosition;
     private double previousHeight;
 
@@ -56,16 +58,15 @@ public class FlashlightLightSource implements IDynamicLightSource {
 
     public void update() {
         Vec3 targetPos = getCrosshairPosition(player.level());
-        double targetHeight = targetPos.y;
 
-        double interpolatedX = previousPosition.x + (targetPos.x - previousPosition.x) * 0.1;
-        double interpolatedY = previousHeight + (targetHeight - previousHeight) * 0.1;
-        double interpolatedZ = previousPosition.z + (targetPos.z - previousPosition.z) * 0.1;
+        if (targetPos.distanceTo(previousPosition) < 0.01) {
+            return;
+        }
 
-        lightEntity.setPos(interpolatedX, interpolatedY, interpolatedZ);
+        lightEntity.setPos(targetPos.x, targetPos.y, targetPos.z);
 
-        previousPosition = new Vec3(interpolatedX, interpolatedY, interpolatedZ);
-        previousHeight = interpolatedY;
+        previousPosition = targetPos;
+        previousHeight = targetPos.y;
     }
 
     public void remove() {
@@ -73,17 +74,30 @@ public class FlashlightLightSource implements IDynamicLightSource {
     }
 
     private Vec3 getCrosshairPosition(Level world) {
+
+        if (player.tickCount == lastRaycastTick && cachedPos != null) {
+            return cachedPos;
+        }
+
+        lastRaycastTick = player.tickCount;
+
         Vec3 eyePos = player.getEyePosition();
         Vec3 lookDirection = player.getLookAngle().normalize();
 
-        ClipContext clipContext = new ClipContext(eyePos, eyePos.add(lookDirection.scale(FLASHLIGHT_RANGE)), ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player);
+        ClipContext clipContext = new ClipContext(
+            eyePos,
+            eyePos.add(lookDirection.scale(FLASHLIGHT_RANGE)),
+            ClipContext.Block.OUTLINE,
+            ClipContext.Fluid.NONE,
+            player
+        );
+
         HitResult hitResult = world.clip(clipContext);
 
-        if (hitResult.getType() == HitResult.Type.BLOCK) {
-            BlockHitResult blockHitResult = (BlockHitResult) hitResult;
-            return blockHitResult.getLocation();
-        }
+        cachedPos = (hitResult.getType() == HitResult.Type.BLOCK)
+            ? ((BlockHitResult) hitResult).getLocation()
+            : eyePos.add(lookDirection.scale(FLASHLIGHT_RANGE));
 
-        return eyePos.add(lookDirection.x * FLASHLIGHT_RANGE, lookDirection.y * FLASHLIGHT_RANGE, lookDirection.z * FLASHLIGHT_RANGE);
+        return cachedPos;
     }
 }

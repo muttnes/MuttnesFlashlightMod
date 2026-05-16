@@ -20,7 +20,6 @@ public class LightEntity extends Entity {
 
     @Override
     public void tick() {
-
     }
 
     @Override

@@ -1,10 +1,11 @@
-package net.muttnes.MuttnesFlashlight;
+package net.muttnes.MuttnesFlashlight.config;
 
 import net.minecraft.world.item.Item;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.config.ModConfigEvent;
+import net.muttnes.MuttnesFlashlight.MuttnesFlashlight;
 
 import java.util.Set;
 
@@ -13,11 +14,16 @@ public class Config
 {
     private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
 
-    public static final ForgeConfigSpec.BooleanValue INJECT_INTO_OTHER_MODS = BUILDER
-            .comment("Allow if you want the flashlight to appear in other mods chest loots. May or may not break/crash the game")
-            .define("injectIntoOtherMods", false);
+    public static final ForgeConfigSpec.EnumValue<LootInjectionMode> LOOT_MODE =
+        BUILDER.comment(
+                "Controls loot injection behavior:\n" +
+                "VANILLA_ONLY = only vanilla Minecraft chests\n" +
+                "ALL_CHESTS = vanilla + other mods\n" +
+                "DISABLED = no loot injection"
+        )
+        .defineEnum("lootInjectionMode", LootInjectionMode.VANILLA_ONLY);
 
-    static final ForgeConfigSpec SPEC = BUILDER.build();
+    public static final ForgeConfigSpec SPEC = BUILDER.build();
 
     public static boolean logDirtBlock;
     public static int magicNumber;

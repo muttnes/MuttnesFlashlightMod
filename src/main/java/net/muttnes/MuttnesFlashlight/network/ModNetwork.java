@@ -16,7 +16,7 @@ public class ModNetwork {
     private static int packetId = 0;
 
     public static void registerMessages() {
-        registerMessage(FlashlightTogglePacket.class, FlashlightTogglePacket::encode, FlashlightTogglePacket::decode, FlashlightTogglePacket::handle);
+        
     }
 
     public static <T> void registerMessage(Class<T> messageType,

@@ -6,6 +6,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.muttnes.MuttnesFlashlight.state.FlashlightState;
 
 public class BatteryItem extends Item {
 
@@ -17,20 +18,25 @@ public class BatteryItem extends Item {
 
     @Override
     public InteractionResultHolder<ItemStack> use(Level world, Player player, InteractionHand hand) {
+
         if (world.isClientSide) {
-            return InteractionResultHolder.pass(player.getItemInHand(hand)); // Solo proceder en el servidor
+            return InteractionResultHolder.pass(player.getItemInHand(hand));
         }
 
         ItemStack batteryStack = player.getItemInHand(hand);
-        InteractionHand otherHand = (hand == InteractionHand.MAIN_HAND) ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
+
+        InteractionHand otherHand =
+                (hand == InteractionHand.MAIN_HAND)
+                        ? InteractionHand.OFF_HAND
+                        : InteractionHand.MAIN_HAND;
+
         ItemStack flashlightStack = player.getItemInHand(otherHand);
 
         if (flashlightStack.getItem() instanceof FlashlightItem) {
-            int flashlightBatteryLevel = FlashlightItem.getBatteryLevel(flashlightStack);
 
-            if (flashlightBatteryLevel < 100) {
-                int newBatteryLevel = Math.min(flashlightBatteryLevel + CHARGE_AMOUNT, 100);
-                FlashlightItem.setBatteryLevel(flashlightStack, newBatteryLevel);
+            if (FlashlightState.canCharge(flashlightStack)) {
+
+                FlashlightState.add(flashlightStack, CHARGE_AMOUNT);
 
                 batteryStack.shrink(1);
 

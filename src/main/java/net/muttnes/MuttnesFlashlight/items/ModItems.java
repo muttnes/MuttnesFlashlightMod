@@ -8,7 +8,6 @@ import net.minecraftforge.registries.RegistryObject;
 import net.muttnes.MuttnesFlashlight.MuttnesFlashlight;
 import net.muttnes.MuttnesFlashlight.items.custom.BatteryItem;
 import net.muttnes.MuttnesFlashlight.items.custom.FlashlightItem;
-import net.muttnes.MuttnesFlashlight.network.ModNetwork;
 
 public class ModItems {
 
@@ -20,7 +19,7 @@ public class ModItems {
     } 
     
     public static final RegistryObject<Item> FLASHLIGHT = ITEMS.register("flashlight",
-    () -> new FlashlightItem(new Item.Properties(), ModNetwork.CHANNEL));
+    () -> new FlashlightItem(new Item.Properties()));
 
     public static final RegistryObject<Item> BATTERY = ITEMS.register("battery",
         () -> new BatteryItem(new Item.Properties()));

@@ -1,6 +1,7 @@
 package net.muttnes.MuttnesFlashlight.client;
 
 import net.muttnes.MuttnesFlashlight.items.custom.FlashlightItem;
+import net.muttnes.MuttnesFlashlight.state.FlashlightState;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -27,7 +28,7 @@ public class FlashlightHUD {
             
             if (mainHand.getItem() instanceof FlashlightItem || offHand.getItem() instanceof FlashlightItem) {
                 ItemStack flashlight = mainHand.getItem() instanceof FlashlightItem ? mainHand : offHand;
-                int batteryLevel = FlashlightItem.getBatteryLevel(flashlight);
+                int batteryLevel = FlashlightState.getBattery(flashlight);
                 batteryText = I18n.get("hud.muttnes_flashlight.battery", batteryLevel);
             } else {
                 batteryText = "";
@@ -37,7 +38,7 @@ public class FlashlightHUD {
 
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
-    public static void onRenderOverlay(RenderGuiOverlayEvent.Pre event) {
+    public static void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (!batteryText.isEmpty()) {
             mc.gui.setOverlayMessage(Component.literal(batteryText), false);
